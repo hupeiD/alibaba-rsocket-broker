@@ -9,7 +9,7 @@
     <groupId>com.alibaba.rsocket</groupId>
     <artifactId>alibaba-rsocket-broker-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.1-SNAPSHOT</version>
 
     <modules>
         <module>alibaba-rsocket-core</module>
@@ -27,29 +27,29 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
-        <spring-boot.version>2.3.9.RELEASE</spring-boot.version>
-        <bytebuddy.version>1.10.21</bytebuddy.version>
-        <micrometer.version>1.5.11</micrometer.version>
-        <reactor-bom.version>Dysprosium-SR17</reactor-bom.version>
-        <netty.version>4.1.59.Final</netty.version>
-        <rsocket.version>1.0.4</rsocket.version>
-        <kotlin.version>1.4.30</kotlin.version>
-        <kotlinx-serialization.version>1.1.0</kotlinx-serialization.version>
-        <kotlinx-coroutines.version>1.4.3</kotlinx-coroutines.version>
+        <spring-boot.version>2.4.6</spring-boot.version>
+        <bytebuddy.version>1.11.0</bytebuddy.version>
+        <micrometer.version>1.7.0</micrometer.version>
+        <reactor-bom.version>2020.0.7</reactor-bom.version>
+        <netty.version>4.1.65.Final</netty.version>
+        <rsocket.version>1.1.0</rsocket.version>
+        <kotlin.version>1.5.0</kotlin.version>
+        <kotlinx-serialization.version>1.2.1</kotlinx-serialization.version>
+        <kotlinx-coroutines.version>1.5.0</kotlinx-coroutines.version>
         <rxjava2.version>2.2.21</rxjava2.version>
-        <rxjava3.version>3.0.10</rxjava3.version>
-        <caffeine.version>2.9.0</caffeine.version>
-        <roaring-bitmap.version>0.9.3</roaring-bitmap.version>
-        <protobuf-java.version>3.15.4</protobuf-java.version>
+        <rxjava3.version>3.0.12</rxjava3.version>
+        <caffeine.version>2.9.1</caffeine.version>
+        <roaring-bitmap.version>0.9.10</roaring-bitmap.version>
+        <protobuf-java.version>3.17.0</protobuf-java.version>
         <hessian.version>4.0.65</hessian.version>
-        <jackson.version>2.12.2</jackson.version>
-        <protostuff.version>1.7.2</protostuff.version>
-        <avro.version>1.10.1</avro.version>
+        <jackson.version>2.12.3</jackson.version>
+        <protostuff.version>1.7.4</protostuff.version>
+        <avro.version>1.10.2</avro.version>
         <eclipse-collections.version>10.4.0</eclipse-collections.version>
-        <spring-cloud-release.version>Hoxton.SR10</spring-cloud-release.version>
-        <cloudevents.version>2.0.0</cloudevents.version>
+        <spring-cloud-release.version>2020.0.2</spring-cloud-release.version>
+        <cloudevents.version>2.1.1</cloudevents.version>
         <zipkin-brave.version>5.13.3</zipkin-brave.version>
-        <junit5.version>5.7.1</junit5.version>
+        <junit5.version>5.7.2</junit5.version>
         <timestamp>${maven.build.timestamp}</timestamp>
     </properties>
 
@@ -96,7 +96,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>20.1.0</version>
+            <version>21.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -128,7 +128,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-tcnative-boringssl-static</artifactId>
-                <version>2.0.36.Final</version>
+                <version>2.0.39.Final</version>
             </dependency>
             <dependency>
                 <groupId>io.projectreactor</groupId>
@@ -169,6 +169,13 @@
                 <groupId>org.jetbrains.kotlinx</groupId>
                 <artifactId>kotlinx-coroutines-bom</artifactId>
                 <version>${kotlinx-coroutines.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-serialization-bom</artifactId>
+                <version>${kotlinx-serialization.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -235,15 +242,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>3.1.12.2</version>
-                <dependencies>
-                    <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
-                    <dependency>
-                        <groupId>com.github.spotbugs</groupId>
-                        <artifactId>spotbugs</artifactId>
-                        <version>4.2.2</version>
-                    </dependency>
-                </dependencies>
+                <version>4.2.2</version>
                 <configuration>
                     <failOnError>false</failOnError>
                 </configuration>
@@ -267,7 +266,7 @@
                 <plugin>
                     <groupId>com.google.cloud.tools</groupId>
                     <artifactId>jib-maven-plugin</artifactId>
-                    <version>2.8.0</version>
+                    <version>3.0.0</version>
                     <configuration>
                         <allowInsecureRegistries>true</allowInsecureRegistries>
                         <from>

@@ -64,7 +64,7 @@ public class RSocketRequesterSupportImpl implements RSocketRequesterSupport, App
     }
 
     @Override
-    public Supplier<Payload> setupPayload() {
+    public Supplier<Payload> setupPayload(String serviceId) {
         return () -> {
             //composite metadata with app metadata
             RSocketCompositeMetadata compositeMetadata = RSocketCompositeMetadata.from(getAppMetadata());
@@ -75,9 +75,11 @@ public class RSocketRequesterSupportImpl implements RSocketRequesterSupport, App
                 serviceRegistryMetadata.setPublished(serviceLocators);
                 compositeMetadata.addMetadata(serviceRegistryMetadata);
             }
-            // authentication
-            if (this.jwtToken != null && this.jwtToken.length > 0) {
-                compositeMetadata.addMetadata(new BearerTokenMetadata(this.jwtToken));
+            // authentication for broker
+            if (serviceId.equals("*")) {
+                if (this.jwtToken != null && this.jwtToken.length > 0) {
+                    compositeMetadata.addMetadata(new BearerTokenMetadata(this.jwtToken));
+                }
             }
             return ByteBufPayload.create(Unpooled.EMPTY_BUFFER, compositeMetadata.getContent());
         };
@@ -130,10 +132,10 @@ public class RSocketRequesterSupportImpl implements RSocketRequesterSupport, App
         appMetadata.setName(appName);
         appMetadata.setIp(NetworkUtil.LOCAL_IP);
         appMetadata.setDevice("SpringBootApp");
-        appMetadata.setRsocketPorts(RSocketAppContext.rsocketPorts);
         //brokers
         appMetadata.setBrokers(properties.getBrokers());
         appMetadata.setTopology(properties.getTopology());
+        appMetadata.setP2pServices(properties.getP2pServices());
         //web port
         appMetadata.setWebPort(Integer.parseInt(env.getProperty("server.port", "0")));
         appMetadata.setManagementPort(appMetadata.getWebPort());
@@ -146,6 +148,11 @@ public class RSocketRequesterSupportImpl implements RSocketRequesterSupport, App
         }
         if (appMetadata.getManagementPort() <= 0) {
             appMetadata.setManagementPort(RSocketAppContext.managementPort);
+        }
+        if (RSocketAppContext.rsocketPorts != null) {
+            appMetadata.setRsocketPorts(RSocketAppContext.rsocketPorts);
+        } else if (properties.getPort() != null) {
+            appMetadata.setRsocketPorts(Collections.singletonMap(properties.getPort(), properties.getSchema()));
         }
         //labels
         appMetadata.setMetadata(new HashMap<>());

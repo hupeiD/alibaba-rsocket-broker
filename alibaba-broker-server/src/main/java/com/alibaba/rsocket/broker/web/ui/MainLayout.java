@@ -1,34 +1,27 @@
 package com.alibaba.rsocket.broker.web.ui;
 
-import com.alibaba.rsocket.broker.dns.DnsResolveService;
 import com.alibaba.rsocket.route.RSocketFilterChain;
 import com.alibaba.spring.boot.rsocket.broker.cluster.RSocketBrokerManager;
 import com.alibaba.spring.boot.rsocket.broker.responder.RSocketBrokerHandlerRegistry;
 import com.alibaba.spring.boot.rsocket.broker.route.ServiceRoutingSelector;
 import com.alibaba.spring.boot.rsocket.broker.security.AuthenticationService;
-import com.alibaba.spring.boot.rsocket.broker.services.ConfigurationService;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
-import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.page.Push;
-import com.vaadin.flow.component.page.Viewport;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
-import com.vaadin.flow.theme.Theme;
-import com.vaadin.flow.theme.lumo.Lumo;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import reactor.core.Disposable;
-import reactor.extra.processor.TopicProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,39 +33,29 @@ import static com.vaadin.flow.component.icon.VaadinIcon.*;
  *
  * @author leijuan
  */
-@StyleSheet("styles/styles.css")
-@Theme(Lumo.class)
-@Viewport("width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes, viewport-fit=cover")
-@Push
 public class MainLayout extends AppLayout implements DisposableBean {
     private static final long serialVersionUID = -1741672705639398634L;
     private Map<Tab, Component> tab2Workspace = new HashMap<>();
     private RSocketBrokerHandlerRegistry handlerRegistry;
     private ServiceRoutingSelector serviceRoutingSelector;
     private RSocketBrokerManager rSocketBrokerManager;
-    private DnsResolveService resolveService;
-    private ConfigurationService configurationService;
     private AuthenticationService authenticationService;
     private RSocketFilterChain filterChain;
-    private TopicProcessor<String> notificationProcessor;
+    private Sinks.Many<String> appNotificationProcessor;
     private Disposable notificationSubscribe = null;
 
     public MainLayout(@Autowired RSocketBrokerHandlerRegistry handlerRegistry,
                       @Autowired ServiceRoutingSelector serviceRoutingSelector,
                       @Autowired RSocketBrokerManager rSocketBrokerManager,
-                      @Autowired DnsResolveService resolveService,
-                      @Autowired ConfigurationService configurationService,
                       @Autowired AuthenticationService authenticationService,
                       @Autowired RSocketFilterChain filterChain,
-                      @Autowired @Qualifier("notificationProcessor") TopicProcessor<String> notificationProcessor) {
+                      @Autowired @Qualifier("appNotificationProcessor") Sinks.Many<String> appNotificationProcessor) {
         this.handlerRegistry = handlerRegistry;
         this.serviceRoutingSelector = serviceRoutingSelector;
         this.rSocketBrokerManager = rSocketBrokerManager;
-        this.resolveService = resolveService;
-        this.configurationService = configurationService;
         this.authenticationService = authenticationService;
         this.filterChain = filterChain;
-        this.notificationProcessor = notificationProcessor;
+        this.appNotificationProcessor = appNotificationProcessor;
         //init the Layout
         Image logo = new Image("/rsocket-logo.svg", "RSocket Logo");
         logo.setHeight("44px");
@@ -81,8 +64,6 @@ public class MainLayout extends AppLayout implements DisposableBean {
 
         final Tabs tabs = new Tabs(dashBoard(),
                 apps(),
-                dns(),
-                appConfig(),
                 services(),
                 serviceTesting(),
                 //serviceMesh(),
@@ -118,22 +99,6 @@ public class MainLayout extends AppLayout implements DisposableBean {
         return tab;
     }
 
-    private Tab dns() {
-        final Span label = new Span("DNS");
-        final Icon icon = RECORDS.create();
-        final Tab tab = new Tab(new HorizontalLayout(icon, label));
-        tab2Workspace.put(tab, new DNSView(this.resolveService));
-        return tab;
-    }
-
-    private Tab appConfig() {
-        final Span label = new Span("AppConfig");
-        final Icon icon = DATABASE.create();
-        final Tab tab = new Tab(new HorizontalLayout(icon, label));
-        tab2Workspace.put(tab, new AppConfigView(this.configurationService, this.rSocketBrokerManager));
-        return tab;
-    }
-
     private Tab services() {
         final Span label = new Span("Services");
         final Icon icon = BULLETS.create();
@@ -141,15 +106,6 @@ public class MainLayout extends AppLayout implements DisposableBean {
         tab2Workspace.put(tab, new ServicesView(this.handlerRegistry, this.serviceRoutingSelector));
         return tab;
     }
-
-    private Tab serviceMesh() {
-        final Span label = new Span("ServiceMesh");
-        final Icon icon = CLUSTER.create();
-        final Tab tab = new Tab(new HorizontalLayout(icon, label));
-        tab2Workspace.put(tab, new ServiceMeshView(this.handlerRegistry));
-        return tab;
-    }
-
 
     private Tab brokers() {
         final Span label = new Span("Brokers");
@@ -213,7 +169,7 @@ public class MainLayout extends AppLayout implements DisposableBean {
     protected void onAttach(AttachEvent attachEvent) {
         super.onAttach(attachEvent);
         closeSubscribeQuietly();
-        this.notificationSubscribe = this.notificationProcessor.subscribe(text -> {
+        this.notificationSubscribe = this.appNotificationProcessor.asFlux().subscribe(text -> {
             attachEvent.getUI().access(() -> {
                 Notification.show(text);
             });

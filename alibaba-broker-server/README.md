@@ -2,6 +2,16 @@ Alibaba RSocket Broker Server
 =============================
 RSocket Broker Server，主要包括RSocket Broker的核心功能和图形化控制台。
 
+### JDK 要求
+
+* Alibaba RSocket Broker兼容Java 8, 11、15和最新的16。 如果你使用Java 11、15和16，在运行时添加以下JVM参数。
+
+```
+ --illegal-access=permit -Dio.netty.tryReflectionSetAccessible=true --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+```
+
+如果Maven编译问题，请添加`MAVEN_OPTS=--illegal-access=permit` 和 JVM参数 `--illegal-access=permit` 然后进行编译。 
+
 ### 日常开发和测试
 
 如果用于日常开发和测试，如果你已经使用Docker的话，你只需要创建一个对应的docker-compose.yml然后启动即可。
@@ -10,7 +20,7 @@ RSocket Broker Server，主要包括RSocket Broker的核心功能和图形化控
 version: "3"
 services:
   alibaba-rsocket-broker:
-    image: linuxchina/alibaba-rsocket-broker:1.0.0.M3
+    image: linuxchina/alibaba-rsocket-broker:1.0.1
     ports:
       - "9997:9997"
       - "9998:9998"
@@ -19,7 +29,6 @@ services:
 
 RSocket Broker的控制台地址为 http://localhost:9998/
 
-如果你想以`java -jar` 方式启动，请使用JDK 1.8.x版本，目前RSocket Broke还不兼容JDK 11，主要是目前Vaadin 14和JDK 11的兼容问题，我们会考虑尽快升级。
 
 ### UI
 RSocket Broker控制台默认采用Vaadin 14编写，主要是基于以下考虑：
@@ -99,7 +108,7 @@ $ cp rsocket.p12 ~/.rsocket/
 rsocket.broker.ssl.enable=true
 ```
 
-### Gossip设置
+### Gossip广播设置和监听端口号42254
 RSocket broker默认是开发者模式，也就是单机运行模式，如果你要开启基于Gossip广播的集群模式，请进行如下配置。
 
 ```
@@ -166,6 +175,12 @@ RSocket的Gossip管理方式中，该端口号为42254，确保各个节点之�
     }
 ```
 
+### Kubernetes部署
+
+* K8S准备工作: 主要是创建rsocket命名空间，同时为Spring-Cloud-Kubernetes访问K8S集群设置对应的权限 `kubectl apply -f alibaba-broker-server/src/main/k8s/setup.yml`
+* 执行编译： mvn -Pk8s -DskipTests clean package
+* K8S部署rsocket broker:  `kubectl apply --namespace=rsocket -f alibaba-broker-server/src/main/k8s/deployment.yml `
+* 应用接入： application.properties中添加 `rsocket.brokers=tcp://rsocket-broker.rsocket.svc.cluster.local:9999`
 
 ### Vaadin Flow
 Alibaba RSocket Broker的Web控制台使用Vaadin 14开发，为了方便你扩展界面，将Vaadin的开发资源列一下，方便二次开发。

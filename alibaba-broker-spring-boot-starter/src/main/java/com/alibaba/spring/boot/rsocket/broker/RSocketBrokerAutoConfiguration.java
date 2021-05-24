@@ -1,6 +1,7 @@
 package com.alibaba.spring.boot.rsocket.broker;
 
 import com.alibaba.rsocket.cloudevents.CloudEventImpl;
+import com.alibaba.rsocket.cloudevents.CloudEventsNotifyService;
 import com.alibaba.rsocket.discovery.DiscoveryService;
 import com.alibaba.rsocket.health.RSocketServiceHealth;
 import com.alibaba.rsocket.listen.RSocketListener;
@@ -8,8 +9,10 @@ import com.alibaba.rsocket.listen.RSocketListenerCustomizer;
 import com.alibaba.rsocket.route.RSocketFilter;
 import com.alibaba.rsocket.route.RSocketFilterChain;
 import com.alibaba.rsocket.rpc.LocalReactiveServiceCaller;
+import com.alibaba.spring.boot.rsocket.broker.cloudevents.CloudEventsNotifyServiceImpl;
 import com.alibaba.spring.boot.rsocket.broker.cluster.DefaultRSocketBrokerManager;
 import com.alibaba.spring.boot.rsocket.broker.cluster.RSocketBrokerManager;
+import com.alibaba.spring.boot.rsocket.broker.cluster.RSocketBrokerManagerDiscoveryImpl;
 import com.alibaba.spring.boot.rsocket.broker.cluster.RSocketBrokerManagerGossipImpl;
 import com.alibaba.spring.boot.rsocket.broker.impl.BrokerRSocketServiceHealthImpl;
 import com.alibaba.spring.boot.rsocket.broker.impl.DiscoveryServiceImpl;
@@ -22,11 +25,9 @@ import com.alibaba.spring.boot.rsocket.broker.route.impl.ServiceMeshInspectorImp
 import com.alibaba.spring.boot.rsocket.broker.route.impl.ServiceRoutingSelectorImpl;
 import com.alibaba.spring.boot.rsocket.broker.security.AuthenticationService;
 import com.alibaba.spring.boot.rsocket.broker.security.AuthenticationServiceJwtImpl;
-import com.alibaba.spring.boot.rsocket.broker.services.*;
-import com.alibaba.spring.boot.rsocket.broker.smi.TrafficAccessControl;
-import com.alibaba.spring.boot.rsocket.broker.smi.TrafficSplit;
-import com.alibaba.spring.boot.rsocket.broker.smi.impl.TrafficAccessControlImpl;
-import com.alibaba.spring.boot.rsocket.broker.smi.impl.TrafficSplitImpl;
+import com.alibaba.spring.boot.rsocket.broker.services.AppQueryController;
+import com.alibaba.spring.boot.rsocket.broker.services.MetricsScrapeController;
+import com.alibaba.spring.boot.rsocket.broker.services.ServiceQueryController;
 import com.alibaba.spring.boot.rsocket.broker.supporting.RSocketLocalServiceAnnotationProcessor;
 import com.alibaba.spring.boot.rsocket.broker.upstream.RSocketRequesterBySubBroker;
 import com.alibaba.spring.boot.rsocket.broker.upstream.UpstreamBrokerCluster;
@@ -38,6 +39,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.client.discovery.ReactiveDiscoveryClient;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,7 +47,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
-import reactor.extra.processor.TopicProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -73,19 +75,8 @@ public class RSocketBrokerAutoConfiguration {
     }
 
     @Bean
-    public ServiceRoutingSelector serviceRoutingSelector() {
-        return new ServiceRoutingSelectorImpl();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public ConfigurationService configurationService() {
-        return new KVStorageServiceImpl();
-    }
-
-    @Bean
-    public ConfigController configController() {
-        return new ConfigController();
+    public ServiceRoutingSelector serviceRoutingSelector(@Autowired @Qualifier("p2pServiceNotificationProcessor") Sinks.Many<String> p2pServiceNotificationProcessor) {
+        return new ServiceRoutingSelectorImpl(p2pServiceNotificationProcessor);
     }
 
     @Bean
@@ -107,15 +98,16 @@ public class RSocketBrokerAutoConfiguration {
     public RSocketBrokerHandlerRegistry rsocketResponderHandlerRegistry(@Autowired LocalReactiveServiceCaller localReactiveServiceCaller,
                                                                         @Autowired RSocketFilterChain rsocketFilterChain,
                                                                         @Autowired ServiceRoutingSelector routingSelector,
-                                                                        @Autowired @Qualifier("reactiveCloudEventProcessor") TopicProcessor<CloudEventImpl> eventProcessor,
-                                                                        @Autowired @Qualifier("notificationProcessor") TopicProcessor<String> notificationProcessor,
+                                                                        @Autowired @Qualifier("reactiveCloudEventProcessor") Sinks.Many<CloudEventImpl> eventProcessor,
+                                                                        @Autowired @Qualifier("appNotificationProcessor") Sinks.Many<String> appNotificationProcessor,
+                                                                        @Autowired @Qualifier("p2pServiceNotificationProcessor") Sinks.Many<String> p2pServiceNotificationProcessor,
                                                                         @Autowired AuthenticationService authenticationService,
                                                                         @Autowired RSocketBrokerManager rSocketBrokerManager,
                                                                         @Autowired ServiceMeshInspector serviceMeshInspector,
                                                                         @Autowired RSocketBrokerProperties properties,
                                                                         @Autowired ApplicationContext applicationContext) {
         return new RSocketBrokerHandlerRegistryImpl(localReactiveServiceCaller, rsocketFilterChain, routingSelector,
-                eventProcessor, notificationProcessor, authenticationService, rSocketBrokerManager, serviceMeshInspector,
+                eventProcessor, appNotificationProcessor, p2pServiceNotificationProcessor, authenticationService, rSocketBrokerManager, serviceMeshInspector,
                 properties.isAuthRequired(), applicationContext);
     }
 
@@ -137,7 +129,7 @@ public class RSocketBrokerAutoConfiguration {
                                                                       @Autowired RSocketBrokerProperties properties) {
         return builder -> {
             builder.acceptor(registry);
-            builder.listen("tcp", properties.getPort());
+            builder.listen("tcp", properties.getListen());
         };
     }
 
@@ -157,7 +149,7 @@ public class RSocketBrokerAutoConfiguration {
                     KeyStore.Entry entry = store.getEntry(alias, new KeyStore.PasswordProtection(rSocketSSL.getKeyStorePassword().toCharArray()));
                     PrivateKey privateKey = ((KeyStore.PrivateKeyEntry) entry).getPrivateKey();
                     builder.sslContext(certificate, privateKey);
-                    builder.listen("tcps", properties.getPort());
+                    builder.listen("tcps", properties.getListen());
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -168,6 +160,11 @@ public class RSocketBrokerAutoConfiguration {
     @Bean
     public DiscoveryService rsocketDiscoveryService() {
         return new DiscoveryServiceImpl();
+    }
+
+    @Bean
+    public CloudEventsNotifyService cloudEventsNotifyService(@Autowired RSocketBrokerHandlerRegistry handlerRegistry) {
+        return new CloudEventsNotifyServiceImpl(handlerRegistry);
     }
 
     @Bean
@@ -194,28 +191,35 @@ public class RSocketBrokerAutoConfiguration {
     }
 
     @Bean
-    public TopicProcessor<CloudEventImpl> reactiveCloudEventProcessor() {
-        return TopicProcessor.<CloudEventImpl>builder().name("cloud-events-processor").build();
+    @ConditionalOnExpression("'${rsocket.broker.topology}'=='discovery' || '${rsocket.broker.topology}'=='k8s'")
+    @Primary
+    public RSocketBrokerManager rsocketDiscoveryBrokerManager(ReactiveDiscoveryClient discoveryClient) {
+        return new RSocketBrokerManagerDiscoveryImpl(discoveryClient);
     }
 
     @Bean
-    public TopicProcessor<String> notificationProcessor() {
-        return TopicProcessor.<String>builder().name("notifications-processor").bufferSize(8).build();
+    public Sinks.Many<CloudEventImpl> reactiveCloudEventProcessor() {
+        return Sinks.many().multicast().onBackpressureBuffer();
+    }
+
+    /**
+     * app notification for online and offline
+     *
+     * @return app notification
+     */
+    @Bean
+    public Sinks.Many<String> appNotificationProcessor() {
+        return Sinks.many().multicast().onBackpressureBuffer(8);
+    }
+
+    @Bean
+    public Sinks.Many<String> p2pServiceNotificationProcessor() {
+        return Sinks.many().multicast().onBackpressureBuffer(10000);
     }
 
     @Bean(initMethod = "init")
     public AppStatusCloudEventProcessor appStatusCloudEventProcessor() {
         return new AppStatusCloudEventProcessor();
-    }
-
-    @Bean
-    public TrafficAccessControl trafficAccessControl() {
-        return new TrafficAccessControlImpl();
-    }
-
-    @Bean
-    public TrafficSplit trafficSplit() {
-        return new TrafficSplitImpl();
     }
 
     @Bean(initMethod = "init", destroyMethod = "close")

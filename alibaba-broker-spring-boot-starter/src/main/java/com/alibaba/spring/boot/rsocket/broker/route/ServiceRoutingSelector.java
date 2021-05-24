@@ -4,6 +4,7 @@ import com.alibaba.rsocket.ServiceLocator;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -22,6 +23,12 @@ public interface ServiceRoutingSelector {
     void deregister(Integer instanceId);
 
     void deregister(Integer instanceId, Integer serviceId);
+
+    void registerP2pServiceConsumer(Integer instanceId, List<String> p2pServices);
+
+    void unRegisterP2pServiceConsumer(Integer instanceId, List<String> p2pServices);
+
+    List<Integer> findP2pServiceConsumers(String p2pService);
 
     boolean containInstance(Integer instanceId);
 

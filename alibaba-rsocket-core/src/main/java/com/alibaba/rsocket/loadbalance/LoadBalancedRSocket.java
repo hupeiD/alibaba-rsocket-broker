@@ -7,6 +7,7 @@ import com.alibaba.rsocket.cloudevents.CloudEventRSocket;
 import com.alibaba.rsocket.cloudevents.EventReply;
 import com.alibaba.rsocket.events.ServicesExposedEvent;
 import com.alibaba.rsocket.health.RSocketServiceHealth;
+import com.alibaba.rsocket.listen.RSocketResponderSupport;
 import com.alibaba.rsocket.metadata.GSVRoutingMetadata;
 import com.alibaba.rsocket.metadata.MessageMimeTypeMetadata;
 import com.alibaba.rsocket.metadata.RSocketCompositeMetadata;
@@ -50,6 +51,7 @@ public class LoadBalancedRSocket extends AbstractRSocket implements CloudEventRS
     private final String serviceId;
     private final Flux<Collection<String>> urisFactory;
     private Collection<String> lastRSocketUris = new ArrayList<>();
+    private Collection<String> firstBatchUris;
     private Map<String, RSocket> activeSockets;
     /**
      * unhealthy uris
@@ -119,6 +121,11 @@ public class LoadBalancedRSocket extends AbstractRSocket implements CloudEventRS
         if (isSameWithLastUris(rsocketUris)) {
             return;
         }
+        //save first batch uris
+        if (this.firstBatchUris == null) {
+            firstBatchUris = rsocketUris;
+        }
+        log.info(RsocketErrorCode.message("RST-300207", serviceId, String.join(",", rsocketUris)));
         this.lastRefreshTimeStamp = System.currentTimeMillis();
         this.lastRSocketUris = rsocketUris;
         this.unHealthyUriSet.clear();
@@ -335,6 +342,10 @@ public class LoadBalancedRSocket extends AbstractRSocket implements CloudEventRS
                 }
             }
         }
+        // use first batch uris to refresh connections
+        if (activeSockets.isEmpty() && !lastRSocketUris.containsAll(firstBatchUris)) {
+            refreshRsockets(firstBatchUris);
+        }
     }
 
     public void onRSocketReconnected(String rsocketUri, RSocket rsocket) {
@@ -387,14 +398,25 @@ public class LoadBalancedRSocket extends AbstractRSocket implements CloudEventRS
                     interceptorRegistry.forResponder(responderInterceptor);
                 });
             }
-            Payload payload = requesterSupport.setupPayload().get();
+            Payload payload = requesterSupport.setupPayload(serviceId).get();
             return rsocketConnector
                     .setupPayload(payload)
                     .metadataMimeType(RSocketMimeType.CompositeMetadata.getType())
                     .dataMimeType(RSocketMimeType.Hessian.getType())
-                    .acceptor(requesterSupport.socketAcceptor())
-                    .connect(UriTransportRegistry.clientForUri(uri))
-                    .doOnError(error -> ReferenceCountUtil.safeRelease(payload));
+                    .acceptor((setup, sendingSocket) -> {
+                        return requesterSupport.socketAcceptor().accept(setup, sendingSocket).doOnNext(responder -> {
+                            if (responder instanceof RSocketResponderSupport) {
+                                String sourcing = "upstream:";
+                                if (this.serviceId.equals("*")) {
+                                    sourcing = sourcing + "broker:*";
+                                } else {
+                                    sourcing = sourcing + ":" + serviceId;
+                                }
+                                ((RSocketResponderSupport) responder).setSourcing(sourcing);
+                            }
+                        });
+                    })
+                    .connect(UriTransportRegistry.clientForUri(uri));
         } catch (Exception e) {
             log.error(RsocketErrorCode.message("RST-400500", uri), e);
             return Mono.error(new ConnectionErrorException(uri));

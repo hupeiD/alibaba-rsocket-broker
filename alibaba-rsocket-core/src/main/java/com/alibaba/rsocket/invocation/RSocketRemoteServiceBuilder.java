@@ -4,7 +4,6 @@ import brave.Tracing;
 import com.alibaba.rsocket.ServiceLocator;
 import com.alibaba.rsocket.ServiceMapping;
 import com.alibaba.rsocket.metadata.RSocketMimeType;
-import com.alibaba.rsocket.upstream.UpstreamCluster;
 import com.alibaba.rsocket.upstream.UpstreamManager;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,13 +24,14 @@ public class RSocketRemoteServiceBuilder<T> {
     private String group;
     private String service;
     private String version;
-    private Duration timeout = Duration.ofMillis(3000);
+    private Duration timeout = Duration.ofMillis(15000);
     private String endpoint;
     private boolean sticky;
+    private boolean p2p;
     private Class<T> serviceInterface;
     private RSocketMimeType encodingType = RSocketMimeType.Hessian;
     private RSocketMimeType acceptEncodingType;
-    private UpstreamCluster upstreamCluster;
+    private UpstreamManager upstreamManager;
     /**
      * zipkin brave tracing client
      */
@@ -119,8 +119,8 @@ public class RSocketRemoteServiceBuilder<T> {
         return this;
     }
 
-    public RSocketRemoteServiceBuilder<T> upstream(UpstreamCluster upstreamCluster) {
-        this.upstreamCluster = upstreamCluster;
+    public RSocketRemoteServiceBuilder<T> p2p(boolean p2p) {
+        this.p2p = p2p;
         return this;
     }
 
@@ -141,7 +141,8 @@ public class RSocketRemoteServiceBuilder<T> {
 
     /**
      * GraalVM nativeImage support: set encodeType and acceptEncodingType to Json
-     * @return  this
+     *
+     * @return this
      */
     public RSocketRemoteServiceBuilder<T> nativeImage() {
         this.encodingType = RSocketMimeType.Json;
@@ -150,12 +151,7 @@ public class RSocketRemoteServiceBuilder<T> {
     }
 
     public RSocketRemoteServiceBuilder<T> upstreamManager(UpstreamManager upstreamManager) {
-        String serviceId = ServiceLocator.serviceId(group, service, version);
-        UpstreamCluster upstream = upstreamManager.findClusterByServiceId(serviceId);
-        if (upstream == null) {
-            upstream = upstreamManager.findBroker();
-        }
-        this.upstreamCluster = upstream;
+        this.upstreamManager = upstreamManager;
         this.sourceUri = upstreamManager.requesterSupport().originUri();
         return this;
     }
@@ -170,11 +166,14 @@ public class RSocketRemoteServiceBuilder<T> {
 
     @NotNull
     private RSocketRequesterRpcProxy getRequesterProxy() {
+        if (this.p2p) {
+            this.upstreamManager.addP2pService(ServiceLocator.serviceId(this.group, this.service, this.version));
+        }
         if (this.braveTracing && this.tracing != null) {
-            return new RSocketRequesterRpcZipkinProxy(tracing, upstreamCluster, group, serviceInterface, service, version,
+            return new RSocketRequesterRpcZipkinProxy(tracing, upstreamManager, group, serviceInterface, service, version,
                     encodingType, acceptEncodingType, timeout, endpoint, sticky, sourceUri, !byteBuddyAvailable);
         } else {
-            return new RSocketRequesterRpcProxy(upstreamCluster, group, serviceInterface, service, version,
+            return new RSocketRequesterRpcProxy(upstreamManager, group, serviceInterface, service, version,
                     encodingType, acceptEncodingType, timeout, endpoint, sticky, sourceUri, !byteBuddyAvailable);
         }
     }

@@ -12,10 +12,10 @@ import com.alibaba.rsocket.observability.MetricsService;
 import com.alibaba.rsocket.route.RoutingEndpoint;
 import com.alibaba.rsocket.rpc.LocalReactiveServiceCaller;
 import com.alibaba.rsocket.rpc.RSocketResponderHandler;
+import com.alibaba.rsocket.upstream.ServiceInstancesChangedEventConsumer;
 import com.alibaba.rsocket.upstream.UpstreamCluster;
 import com.alibaba.rsocket.upstream.UpstreamClusterChangedEventConsumer;
 import com.alibaba.rsocket.upstream.UpstreamManager;
-import com.alibaba.rsocket.upstream.UpstreamManagerImpl;
 import com.alibaba.spring.boot.rsocket.health.RSocketServiceHealthImpl;
 import com.alibaba.spring.boot.rsocket.observability.MetricsServicePrometheusImpl;
 import com.alibaba.spring.boot.rsocket.responder.RSocketServicesPublishHook;
@@ -23,16 +23,14 @@ import com.alibaba.spring.boot.rsocket.responder.invocation.RSocketServiceAnnota
 import com.alibaba.spring.boot.rsocket.upstream.JwtTokenNotFoundException;
 import com.alibaba.spring.boot.rsocket.upstream.RSocketRequesterSupportBuilderImpl;
 import com.alibaba.spring.boot.rsocket.upstream.RSocketRequesterSupportCustomizer;
+import com.alibaba.spring.boot.rsocket.upstream.SmartLifecycleUpstreamManagerImpl;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.rsocket.SocketAcceptor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.context.WebServerInitializedEvent;
 import org.springframework.context.ApplicationContext;
@@ -51,8 +49,9 @@ import java.util.stream.Collectors;
  *
  * @author leijuan
  */
-@SuppressWarnings({"rawtypes", "SpringJavaInjectionPointsAutowiringInspection"})
+@SuppressWarnings({"rawtypes"})
 @Configuration
+@ConditionalOnExpression("${rsocket.disabled:false}==false")
 @EnableConfigurationProperties(RSocketProperties.class)
 public class RSocketAutoConfiguration {
     @Autowired
@@ -79,6 +78,11 @@ public class RSocketAutoConfiguration {
     @Bean
     public UpstreamClusterChangedEventConsumer upstreamClusterChangedEventConsumer(@Autowired UpstreamManager upstreamManager) {
         return new UpstreamClusterChangedEventConsumer(upstreamManager);
+    }
+
+    @Bean
+    public ServiceInstancesChangedEventConsumer serviceInstancesChangedEventConsumer(@Autowired UpstreamManager upstreamManager) {
+        return new ServiceInstancesChangedEventConsumer(upstreamManager);
     }
 
     @Bean
@@ -136,9 +140,9 @@ public class RSocketAutoConfiguration {
         return new RSocketServiceAnnotationProcessor(rsocketProperties);
     }
 
-    @Bean(initMethod = "init", destroyMethod = "close")
+    @Bean(initMethod = "init")
     public UpstreamManager rsocketUpstreamManager(@Autowired RSocketRequesterSupport rsocketRequesterSupport) throws JwtTokenNotFoundException {
-        UpstreamManager upstreamManager = new UpstreamManagerImpl(rsocketRequesterSupport);
+        SmartLifecycleUpstreamManagerImpl upstreamManager = new SmartLifecycleUpstreamManagerImpl(rsocketRequesterSupport);
         if (properties.getBrokers() != null && !properties.getBrokers().isEmpty()) {
             if (properties.getJwtToken() == null || properties.getJwtToken().isEmpty()) {
                 throw new JwtTokenNotFoundException();
@@ -147,6 +151,7 @@ public class RSocketAutoConfiguration {
             cluster.setUris(properties.getBrokers());
             upstreamManager.add(cluster);
         }
+        upstreamManager.setP2pServices(properties.getP2pServices());
         if (properties.getRoutes() != null && !properties.getRoutes().isEmpty()) {
             for (RoutingEndpoint route : properties.getRoutes()) {
                 UpstreamCluster cluster = new UpstreamCluster(route.getGroup(), route.getService(), route.getVersion());

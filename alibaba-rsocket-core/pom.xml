@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.alibaba.rsocket</groupId>
         <artifactId>alibaba-rsocket-broker-parent</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <artifactId>alibaba-rsocket-core</artifactId>
     <name>Alibaba RSocket Core</name>
@@ -88,25 +88,21 @@
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-serialization-core-jvm</artifactId>
-            <version>${kotlinx-serialization.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-serialization-json-jvm</artifactId>
-            <version>${kotlinx-serialization.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-serialization-protobuf-jvm</artifactId>
-            <version>${kotlinx-serialization.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-serialization-cbor-jvm</artifactId>
-            <version>${kotlinx-serialization.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>

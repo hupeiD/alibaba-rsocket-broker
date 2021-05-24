@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.alibaba.rsocket</groupId>
         <artifactId>alibaba-rsocket-broker-parent</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>alibaba-broker-spring-boot-starter</artifactId>
@@ -14,8 +14,8 @@
     <description>Alibaba RSocket Broker Spring Boot Starter for extension</description>
 
     <properties>
-        <scalecube-cluster.version>2.6.6</scalecube-cluster.version>
-        <java-jwt.version>3.14.0</java-jwt.version>
+        <scalecube-cluster.version>2.6.9</scalecube-cluster.version>
+        <java-jwt.version>3.16.0</java-jwt.version>
     </properties>
 
     <dependencies>
@@ -77,6 +77,11 @@
             <groupId>io.scalecube</groupId>
             <artifactId>scalecube-cluster-testlib</artifactId>
             <version>${scalecube-cluster.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-commons</artifactId>
+            <version>3.0.2</version>
         </dependency>
         <!--unit test-->
         <dependency>

@@ -7,8 +7,10 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.eclipse.collections.impl.multimap.set.UnifiedSetMultimap;
 import org.jetbrains.annotations.Nullable;
+import reactor.core.publisher.Sinks;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -27,10 +29,17 @@ public class ServiceRoutingSelectorImpl implements ServiceRoutingSelector {
      */
     private IntObjectHashMap<ServiceLocator> distinctServices = new IntObjectHashMap<>();
 
+    private FastListMultimap2<String, Integer> p2pServiceConsumers = new FastListMultimap2<>();
+
     /**
      * instance to services
      */
     private UnifiedSetMultimap<Integer, Integer> instanceServices = new UnifiedSetMultimap<>();
+    private Sinks.Many<String> p2pServiceNotificationProcessor;
+
+    public ServiceRoutingSelectorImpl(Sinks.Many<String> p2pServiceNotificationProcessor) {
+        this.p2pServiceNotificationProcessor = p2pServiceNotificationProcessor;
+    }
 
     @Override
     public void register(Integer instanceId, Set<ServiceLocator> services) {
@@ -46,6 +55,10 @@ public class ServiceRoutingSelectorImpl implements ServiceRoutingSelector {
                 instanceServices.put(instanceId, serviceId);
                 serviceHandlers.putMultiCopies(serviceId, instanceId, powerUnit);
                 distinctServices.put(serviceId, serviceLocator);
+                //p2p service notification
+                if (p2pServiceConsumers.containsKey(serviceLocator.getGsv())) {
+                    p2pServiceNotificationProcessor.tryEmitNext(serviceLocator.getGsv());
+                }
             }
         }
     }
@@ -58,9 +71,13 @@ public class ServiceRoutingSelectorImpl implements ServiceRoutingSelector {
     public void deregister(Integer instanceId) {
         if (instanceServices.containsKey(instanceId)) {
             for (Integer serviceId : instanceServices.get(instanceId)) {
+                ServiceLocator serviceLocator = distinctServices.get(serviceId);
                 serviceHandlers.removeAllSameValue(serviceId, instanceId);
                 if (!serviceHandlers.containsKey(serviceId)) {
                     distinctServices.remove(serviceId);
+                }
+                if (serviceLocator != null && p2pServiceConsumers.containsKey(serviceLocator.getGsv())) {
+                    p2pServiceNotificationProcessor.tryEmitNext(serviceLocator.getGsv());
                 }
             }
             instanceServices.removeAll(instanceId);
@@ -78,6 +95,25 @@ public class ServiceRoutingSelectorImpl implements ServiceRoutingSelector {
                 instanceServices.removeAll(instanceId);
             }
         }
+    }
+
+    @Override
+    public void registerP2pServiceConsumer(Integer instanceId, List<String> p2pServices) {
+        for (String p2pService : p2pServices) {
+            p2pServiceConsumers.put(p2pService, instanceId);
+        }
+    }
+
+    @Override
+    public void unRegisterP2pServiceConsumer(Integer instanceId, List<String> p2pServices) {
+        for (String p2pService : p2pServices) {
+            p2pServiceConsumers.remove(p2pService, instanceId);
+        }
+    }
+
+    @Override
+    public List<Integer> findP2pServiceConsumers(String p2pService) {
+        return p2pServiceConsumers.get(p2pService);
     }
 
     @Override

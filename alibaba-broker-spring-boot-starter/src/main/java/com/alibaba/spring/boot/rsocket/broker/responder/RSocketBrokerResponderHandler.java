@@ -11,6 +11,8 @@ import com.alibaba.rsocket.metadata.*;
 import com.alibaba.rsocket.observability.RsocketErrorCode;
 import com.alibaba.rsocket.route.RSocketFilterChain;
 import com.alibaba.rsocket.rpc.LocalReactiveServiceCaller;
+import com.alibaba.rsocket.upstream.ServiceInstancesChangedEvent;
+import com.alibaba.spring.boot.rsocket.broker.BrokerAppContext;
 import com.alibaba.spring.boot.rsocket.broker.route.ServiceMeshInspector;
 import com.alibaba.spring.boot.rsocket.broker.route.ServiceRoutingSelector;
 import com.alibaba.spring.boot.rsocket.broker.security.RSocketAppPrincipal;
@@ -38,11 +40,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
-import reactor.extra.processor.TopicProcessor;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -121,7 +122,7 @@ public class RSocketBrokerResponderHandler extends RSocketResponderSupport imple
     /**
      * reactive event processor
      */
-    private TopicProcessor<CloudEventImpl> eventProcessor;
+    private Sinks.Many<CloudEventImpl> eventProcessor;
     /**
      * UUID from requester side
      */
@@ -141,7 +142,7 @@ public class RSocketBrokerResponderHandler extends RSocketResponderSupport imple
                                          @NotNull RSocketAppPrincipal principal,
                                          RSocket peerRsocket,
                                          ServiceRoutingSelector routingSelector,
-                                         TopicProcessor<CloudEventImpl> eventProcessor,
+                                         Sinks.Many<CloudEventImpl> eventProcessor,
                                          RSocketBrokerHandlerRegistry handlerRegistry,
                                          ServiceMeshInspector serviceMeshInspector,
                                          @Nullable RSocket upstreamRSocket) {
@@ -319,7 +320,7 @@ public class RSocketBrokerResponderHandler extends RSocketResponderSupport imple
     public Mono<Void> fireCloudEvent(CloudEventImpl<?> cloudEvent) {
         //要进行event的安全验证，不合法来源的event进行消费，后续还好进行event判断
         if (uuid.equalsIgnoreCase(cloudEvent.getAttributes().getSource().getHost())) {
-            return Mono.fromRunnable(() -> eventProcessor.onNext(cloudEvent));
+            return Mono.fromRunnable(() -> eventProcessor.tryEmitNext(cloudEvent));
         }
         return Mono.empty();
     }
@@ -467,6 +468,11 @@ public class RSocketBrokerResponderHandler extends RSocketResponderSupport imple
         } catch (Exception e) {
             return Mono.error(e);
         }
+    }
+
+    public Mono<Void> fireCloudEventToPeer(String cloudEventJson) {
+        Payload payload = ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.wrappedBuffer(cloudEventJson.getBytes(StandardCharsets.UTF_8)));
+        return peerRsocket.metadataPush(payload);
     }
 
     private void recordServiceInvoke(String name, String serviceId) {
@@ -633,12 +639,11 @@ public class RSocketBrokerResponderHandler extends RSocketResponderSupport imple
 
     private String getRemoteAddress(RSocket requesterSocket) {
         try {
-            Method remoteAddressMethod = ReflectionUtils.findMethod(DuplexConnection.class, "remoteAddress");
-            if (remoteAddressMethod != null) {
-                Field connectionField = ReflectionUtils.findField(requesterSocket.getClass(), "connection");
-                if (connectionField != null) {
-                    DuplexConnection connection = (DuplexConnection) ReflectionUtils.getField(connectionField, requesterSocket);
-                    SocketAddress remoteAddress = (SocketAddress) remoteAddressMethod.invoke(connection);
+            Field connectionField = ReflectionUtils.findField(requesterSocket.getClass(), "connection");
+            if (connectionField != null) {
+                DuplexConnection connection = (DuplexConnection) ReflectionUtils.getField(connectionField, requesterSocket);
+                if (connection != null) {
+                    SocketAddress remoteAddress = connection.remoteAddress();
                     if (remoteAddress instanceof InetSocketAddress) {
                         return ((InetSocketAddress) remoteAddress).getHostName();
                     }
@@ -649,4 +654,5 @@ public class RSocketBrokerResponderHandler extends RSocketResponderSupport imple
         }
         return null;
     }
+    
 }

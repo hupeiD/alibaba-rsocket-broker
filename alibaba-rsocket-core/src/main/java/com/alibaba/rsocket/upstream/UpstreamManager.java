@@ -2,6 +2,7 @@ package com.alibaba.rsocket.upstream;
 
 import com.alibaba.rsocket.Initializable;
 import com.alibaba.rsocket.RSocketRequesterSupport;
+import com.alibaba.rsocket.discovery.DiscoveryService;
 import io.rsocket.RSocket;
 
 import java.io.Closeable;
@@ -17,11 +18,17 @@ public interface UpstreamManager extends Initializable, Closeable {
 
     void add(UpstreamCluster cluster);
 
+    void remove(UpstreamCluster cluster);
+
+    void addP2pService(String serviceId);
+
     Collection<UpstreamCluster> findAllClusters();
 
     UpstreamCluster findClusterByServiceId(String serviceId);
 
     UpstreamCluster findBroker();
+
+    DiscoveryService findBrokerDiscoveryService();
 
     /**
      * get rsocket for service id with load balance support
@@ -32,6 +39,7 @@ public interface UpstreamManager extends Initializable, Closeable {
     RSocket getRSocket(String serviceId);
 
     RSocketRequesterSupport requesterSupport();
+
     /**
      * refresh service  with new uri list
      *

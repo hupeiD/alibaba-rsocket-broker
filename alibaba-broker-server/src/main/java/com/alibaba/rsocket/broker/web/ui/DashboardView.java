@@ -14,6 +14,7 @@ import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteAlias;
 import io.micrometer.core.instrument.Metrics;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -28,8 +29,9 @@ import static com.alibaba.rsocket.broker.web.ui.DashboardView.NAV;
  * @author leijuan
  */
 @Route(value = NAV, layout = MainLayout.class)
+@RouteAlias(value = "", layout = MainLayout.class)
 public class DashboardView extends VerticalLayout {
-    public static final String NAV = "";
+    public static final String NAV = "dashboard";
     private Text brokersCount = new Text("0");
     private Text appsCount = new Text("0");
     private Text servicesCount = new Text("0");
@@ -85,7 +87,7 @@ public class DashboardView extends VerticalLayout {
 
     @Override
     protected void onAttach(AttachEvent attachEvent) {
-        String brokerClusterType = rSocketBrokerManager.isStandAlone() ? "singleton" : "gossip";
+        String brokerClusterType = rSocketBrokerManager.getName();
         this.brokersCount.setText(rSocketBrokerManager.currentBrokers().size() + " (" + brokerClusterType + ")");
         this.appsCount.setText(String.valueOf(handlerRegistry.appHandlers().size()));
         this.servicesCount.setText(String.valueOf(serviceRoutingSelector.findAllServices().size()));
@@ -97,8 +99,9 @@ public class DashboardView extends VerticalLayout {
     public List<AppMetadata> appMetadataList(RSocketBrokerHandlerRegistry handlerFactory) {
         return handlerFactory.findAll()
                 .stream()
-                .limit(10)
                 .map(RSocketBrokerResponderHandler::getAppMetadata)
+                .sorted((o1, o2) -> o2.getConnectedAt().compareTo(o1.getConnectedAt()))
+                .limit(10)
                 .collect(Collectors.toList());
     }
 

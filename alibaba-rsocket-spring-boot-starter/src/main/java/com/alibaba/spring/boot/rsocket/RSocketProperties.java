@@ -1,8 +1,10 @@
 package com.alibaba.spring.boot.rsocket;
 
 import com.alibaba.rsocket.route.RoutingEndpoint;
+import com.alibaba.rsocket.transport.NetworkUtil;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +58,8 @@ public class RSocketProperties {
      * endpoints: interface full name to endpoint url
      */
     private List<RoutingEndpoint> routes;
+    
+    private List<String> p2pServices;
 
     public String getSchema() {
         return schema;
@@ -103,6 +107,16 @@ public class RSocketProperties {
 
     public void setBrokers(List<String> brokers) {
         this.brokers = brokers;
+        for (String broker : brokers) {
+            try {
+                URI uri = URI.create(broker);
+                if (!NetworkUtil.isInternalIp(uri.getHost())) {
+                    this.topology = "internet";
+                }
+            } catch (Exception ignore) {
+
+            }
+        }
     }
 
     public String getTopology() {
@@ -119,6 +133,14 @@ public class RSocketProperties {
 
     public void setRoutes(List<RoutingEndpoint> routes) {
         this.routes = routes;
+    }
+
+    public List<String> getP2pServices() {
+        return p2pServices;
+    }
+
+    public void setP2pServices(List<String> p2pServices) {
+        this.p2pServices = p2pServices;
     }
 
     public Map<String, String> getMetadata() {

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.ReplayProcessor;
 
 import java.io.Closeable;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -109,6 +110,14 @@ public class UpstreamCluster implements Initializable, Closeable {
         return loadBalancedRSocket;
     }
 
+    public boolean isLocal() {
+        if (uris != null && uris.size() == 1) {
+            String host = URI.create(uris.get(0)).getHost();
+            return host.equals("127.0.0.1") || host.equals("localhost");
+        }
+        return false;
+    }
+
     @Override
     public void close() {
         try {
@@ -123,7 +132,7 @@ public class UpstreamCluster implements Initializable, Closeable {
     @Override
     public void init() {
         if (status != 1) {
-            if(!this.uris.isEmpty()) {
+            if (!this.uris.isEmpty()) {
                 freshUpstreams();
             }
             loadBalancedRSocket = new LoadBalancedRSocket(getServiceId(), urisProcessor, rsocketRequesterSupport);
