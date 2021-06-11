@@ -1,7 +1,10 @@
 Alibaba RSocket Broker变更记录
 ==========================
 
-## 1.1.1
+<!-- Keep a Changelog guide -> https://keepachangelog.com -->
+<!-- Types of changes: Added, Changed, Deprecated, Removed, Fixed, Security, Document -->
+
+## [1.1.1] - 2021-06-10
 
 从1.1.1版本开始，我们决定对RSocket Broker进行瘦身，一味地叠加特性不是好的设计策略，而是将功能做的更可靠，提供更好的扩展才是好的策略。
 所以接下来我们会所有的特性进行review，将其中一些不需要的特性进行删除，同时会增加一些基础特性，方便开发者在核心功能上进行扩展。
@@ -9,7 +12,7 @@ Alibaba RSocket Broker变更记录
 目前要移除的功能如下：
 
 * Remove SMI beans：service meshes将调整到Kubernetes对接中 https://smi-spec.io/
-* Config Server功能：从Broker中迁移到外部服务加载方式
+* Config Server功能：从Broker中迁移到外部服务加载方式  https://github.com/alibaba-rsocket-broker/rsocket-broker-config-server-service
 * HTTP DNS的功能移除
 
 ### 特性调整
@@ -19,8 +22,12 @@ Alibaba RSocket Broker变更记录
 * CloudEvents Java SDK升级至2.1
 * 添加对等通讯的能力，详细请参考： https://github.com/alibaba/alibaba-rsocket-broker/wiki/RSocket-P2P
 * CloudEventImpl中添加事件来源，这样事件消费可以增加来源判断
+* 添加GraphQL样例：https://github.com/alibaba-rsocket-broker/rsocket-graphql-gateway
+* RSocket Broker控制台: Vaadin升级至20.0
+* RSocket Java SDK升级至1.1.1
+* Spring Boot 2.4.7/2.5.1兼容测试
 
-## 1.1.0
+## [1.1.0] - 2021-04-23
 
 RSocket Broker 1.1将会基于RSocket Java 1.1.0和Spring Boot 2.4.x开发。
 
@@ -51,38 +58,38 @@ RSocket Broker 1.1将会基于RSocket Java 1.1.0和Spring Boot 2.4.x开发。
 * 添加创建RSocket Broker应用模板: https://github.com/tgm-templates/rsocket-broker-example
 * example模块添加user-service-spring-boot-starter，更方便第三方Spring Boot应用调用服务
 
-## 1.0.1
+## [1.0.1] - 2021-03-23
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.1
 
-## 1.0.0
+## [1.0.0] - 2021-03-04
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0
 
-## 1.0.0.RC4
+## [1.0.0.RC4] - 2021-01-14
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.RC4
 
-## 1.0.0.RC3
+## [1.0.0.RC3] - 2020-11-12
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.RC3
 
-## 1.0.0.RC2
+## [1.0.0.RC2] - 2020-10-04
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.RC2
 
-## 1.0.0.RC1
+## [1.0.0.RC1] - 2020-08-31
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.RC1
 
-## 1.0.0.M3
+## [1.0.0.M3] - 2020-07-24
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.M3
 
-## 1.0.0.M2
+## [1.0.0.M2] - 2020-05-17
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.M2
 
-## 1.0.0.M1
+## [1.0.0.M1] - 2020-03-22
 
 https://github.com/alibaba/alibaba-rsocket-broker/releases/tag/1.0.0.M1

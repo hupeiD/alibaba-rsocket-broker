@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <prerequisites>
         <maven>3.5.0</maven>
@@ -9,7 +9,7 @@
     <groupId>com.alibaba.rsocket</groupId>
     <artifactId>alibaba-rsocket-broker-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.1.2-SNAPSHOT</version>
 
     <modules>
         <module>alibaba-rsocket-core</module>
@@ -27,17 +27,19 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
-        <spring-boot.version>2.4.6</spring-boot.version>
-        <bytebuddy.version>1.11.0</bytebuddy.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <spring-boot.version>2.4.7</spring-boot.version>
+        <bytebuddy.version>1.11.1</bytebuddy.version>
         <micrometer.version>1.7.0</micrometer.version>
         <reactor-bom.version>2020.0.7</reactor-bom.version>
         <netty.version>4.1.65.Final</netty.version>
-        <rsocket.version>1.1.0</rsocket.version>
-        <kotlin.version>1.5.0</kotlin.version>
+        <rsocket.version>1.1.1</rsocket.version>
+        <kotlin.version>1.5.10</kotlin.version>
         <kotlinx-serialization.version>1.2.1</kotlinx-serialization.version>
         <kotlinx-coroutines.version>1.5.0</kotlinx-coroutines.version>
         <rxjava2.version>2.2.21</rxjava2.version>
-        <rxjava3.version>3.0.12</rxjava3.version>
+        <rxjava3.version>3.0.13</rxjava3.version>
         <caffeine.version>2.9.1</caffeine.version>
         <roaring-bitmap.version>0.9.10</roaring-bitmap.version>
         <protobuf-java.version>3.17.0</protobuf-java.version>
@@ -46,7 +48,7 @@
         <protostuff.version>1.7.4</protostuff.version>
         <avro.version>1.10.2</avro.version>
         <eclipse-collections.version>10.4.0</eclipse-collections.version>
-        <spring-cloud-release.version>2020.0.2</spring-cloud-release.version>
+        <spring-cloud-release.version>2020.0.3</spring-cloud-release.version>
         <cloudevents.version>2.1.1</cloudevents.version>
         <zipkin-brave.version>5.13.3</zipkin-brave.version>
         <junit5.version>5.7.2</junit5.version>
@@ -96,7 +98,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>21.0.0</version>
+            <version>21.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -225,7 +227,7 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.0.2</version>
+                <version>4.0.4</version>
                 <executions>
                     <execution>
                         <goals>

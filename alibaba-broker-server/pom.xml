@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.alibaba.rsocket</groupId>
         <artifactId>alibaba-rsocket-broker-parent</artifactId>
-        <version>1.1.1-SNAPSHOT</version>
+        <version>1.1.2-SNAPSHOT</version>
     </parent>
 
     <artifactId>alibaba-broker-server</artifactId>
@@ -13,9 +13,9 @@
     <description>Alibaba RSocket Broker with Web Console</description>
 
     <properties>
-        <vaadin.version>19.0.8</vaadin.version>
+        <vaadin.version>20.0.1</vaadin.version>
         <flexmark-all.version>0.62.2</flexmark-all.version>
-        <undertow.version>2.2.7.Final</undertow.version>
+        <undertow.version>2.2.8.Final</undertow.version>
         <vaadin.productionMode>true</vaadin.productionMode>
         <mainClass>com.alibaba.rsocket.broker.AlibabaRSocketBrokerServer</mainClass>
     </properties>
@@ -72,7 +72,7 @@
         <dependency>
             <groupId>com.vaadin</groupId>
             <!-- Replace artifactId with vaadin-core to use only free components -->
-            <artifactId>vaadin</artifactId>
+            <artifactId>vaadin-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
@@ -181,7 +181,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.0</version>
                 <configuration>
                     <finalName>alibaba-rsocket-broker-${project.version}</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
