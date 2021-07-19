@@ -9,10 +9,10 @@
     </parent>
 
     <properties>
-        <protobuf-java.version>3.17.0</protobuf-java.version>
-        <grpc.version>1.38.0</grpc.version>
-        <reactive-grpc.version>1.0.1</reactive-grpc.version>
-        <grpc-spring-boot-starter.version>4.5.3</grpc-spring-boot-starter.version>
+        <protobuf-java.version>3.17.3</protobuf-java.version>
+        <grpc.version>1.39.0</grpc.version>
+        <reactive-grpc.version>1.1.0</reactive-grpc.version>
+        <grpc-spring-boot-starter.version>4.5.5</grpc-spring-boot-starter.version>
     </properties>
 
     <artifactId>alibaba-broker-grpc-gateway</artifactId>
@@ -134,7 +134,7 @@
             <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
-                <version>1.6.2</version>
+                <version>1.7.0</version>
             </extension>
         </extensions>
         <plugins>

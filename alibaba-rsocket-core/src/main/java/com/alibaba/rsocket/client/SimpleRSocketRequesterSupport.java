@@ -41,6 +41,7 @@ public class SimpleRSocketRequesterSupport implements RSocketRequesterSupport {
     private char[] jwtToken;
     private List<String> brokers;
     private String appName;
+    private String topology = "intranet";
     private LocalReactiveServiceCaller serviceCaller;
     private TopicProcessor<CloudEventImpl> eventProcessor;
 
@@ -52,6 +53,10 @@ public class SimpleRSocketRequesterSupport implements RSocketRequesterSupport {
         this.brokers = brokers;
         this.eventProcessor = eventProcessor;
         this.serviceCaller = serviceCaller;
+    }
+
+    public void setTopology(String topology) {
+        this.topology = topology;
     }
 
     @Override
@@ -131,6 +136,7 @@ public class SimpleRSocketRequesterSupport implements RSocketRequesterSupport {
         appMetadata.setIp(NetworkUtil.LOCAL_IP);
         appMetadata.setDevice(appName);
         appMetadata.setBrokers(brokers);
+        appMetadata.setTopology(this.topology);
         return appMetadata;
     }
 }
